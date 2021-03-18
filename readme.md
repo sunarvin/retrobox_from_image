@@ -8,6 +8,9 @@ Steps:
 4. Create a rootfs, port SDL and fcuex.
 5. Launch game and go.
 
-  ![image](https://github.com/sunarvin/retrobox_from_image/blob/main/boot.png)
-  ![image](https://github.com/sunarvin/retrobox_from_image/blob/main/game1.png)
-  ![image](https://github.com/sunarvin/retrobox_from_image/blob/main/game2.png)
+  ![image](https://github.com/sunarvin/retrobox_from_image/blob/main/images/boot.png)
+  ![image](https://github.com/sunarvin/retrobox_from_image/blob/main/images/game1.png)
+  ![image](https://github.com/sunarvin/retrobox_from_image/blob/main/images/game2.png)
+
+  ![image](https://github.com/sunarvin/retrobox_from_image/blob/main/images/1dts.gif)
+  ![image](https://github.com/sunarvin/retrobox_from_image/blob/main/images/2game.gif)
