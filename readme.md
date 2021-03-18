@@ -7,3 +7,6 @@ Steps:
 3. Debug your own .dts for uboot and kernel on the board.
 4. Create a rootfs, port SDL and fcuex.
 5. Launch game and go.
+
+ ![image](https://github.com/sunarvin/retrobox_from_image/blob/main/1dts.gif)
+ ![image](https://github.com/sunarvin/retrobox_from_image/blob/main/2game.gif)
