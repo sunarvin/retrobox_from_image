@@ -1,0 +1,148 @@
+diff -Nuar A/bin/setup-package-install.sh B/bin/setup-package-install.sh
+--- A/bin/setup-package-install.sh	2020-04-19 21:13:20.000000000 +0800
++++ B/bin/setup-package-install.sh	2020-10-01 22:47:21.871955000 +0800
+@@ -56,19 +56,20 @@
+ 
+ entry_header
+ 
+-packages_to_install="xinetd tftpd nfs-kernel-server minicom build-essential libncurses5-dev autoconf automake dos2unix screen lrzsz lzop flex libssl-dev"
++packages_to_install="bison xinetd tftpd nfs-kernel-server minicom build-essential libncurses5-dev autoconf automake dos2unix screen lrzsz lzop flex libssl-dev"
+ 
+ get_major_host_version host_major_version
+ 
+ # Starting with Ubuntu 14.04 the package name for uboot-mkimage has changed
+ # to u-boot-tools
+ 
+-if [ $host_major_version -ge 14 ]; then
+-    packages_to_install="$packages_to_install u-boot-tools"
+-else
+-    packages_to_install="$packages_to_install uboot-mkimage"
+-
+-fi
++packages_to_install="$packages_to_install u-boot-tools"
++#if [ $host_major_version -ge 14 ]; then
++#    packages_to_install="$packages_to_install u-boot-tools"
++#else
++#    packages_to_install="$packages_to_install uboot-mkimage"
++#
++#fi
+ 
+ cmd="sudo apt-get install "
+ 
+diff -Nuar A/Makefile B/Makefile
+--- A/Makefile	2020-04-20 11:56:45.000000000 +0800
++++ B/Makefile	2021-03-22 07:01:00.252926873 +0800
+@@ -6,6 +6,69 @@
+ clean: linux_clean matrix-gui_clean arm-benchmarks_clean am-sysinfo_clean oprofile-example_clean matrix-gui-browser_clean refresh-screen_clean qt-tstat_clean u-boot-spl_clean linux-dtbs_clean cryptodev_clean ti-sgx-ddk-km_clean pru-icss_clean barcode-roi_clean uio-module-drv_clean mmwavegesture-hmi_clean pdm-anomaly-detection_clean evse-hmi_clean protection-relays-hmi_clean pru-adc_clean 
+ install: linux_install matrix-gui_install arm-benchmarks_install am-sysinfo_install oprofile-example_install matrix-gui-browser_install refresh-screen_install qt-tstat_install u-boot-spl_install linux-dtbs_install cryptodev_install ti-sgx-ddk-km_install pru-icss_install barcode-roi_install uio-module-drv_install mmwavegesture-hmi_install pdm-anomaly-detection_install evse-hmi_install protection-relays-hmi_install pru-adc_install 
+ # Kernel build targets
++
++################################################################################
++# MOD_BEGIN
++# replace the setting in Rules.make
++ROOTFS_PATH=/media/builder/rootfs/
++DTB_FILENAME=am335x_eng_board.dtb
++ZIMAGE_DTB_FILENAME=zImage_dtb
++UIMAGE_DTB_FILENAME=uImage_dtb
++MAKE_JOBS=16
++
++# menuconfig
++modmc:
++	@echo =================================
++	@echo     Configure the Linux Kernel
++	@echo =================================
++	$(MAKE) -j $(MAKE_JOBS) -C $(LINUXKERNEL_INSTALL_DIR) ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) menuconfig
++
++
++# uImage
++modu:
++	@echo =================================
++	@echo     Building the uImage
++	@echo =================================
++	$(MAKE) -j $(MAKE_JOBS) -C $(LINUXKERNEL_INSTALL_DIR) ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) zImage
++	$(MAKE) -C $(LINUXKERNEL_INSTALL_DIR) ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) LOADADDR=0x80008000 uImage
++	cp $(LINUXKERNEL_INSTALL_DIR)/arch/arm/boot/uImage /tftpboot/
++
++
++# dtb
++modd:
++	@echo =================================
++	@echo     Building the $(DTB_FILENAME)
++	@echo =================================
++	$(MAKE) -C $(LINUXKERNEL_INSTALL_DIR) ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) $(DTB_FILENAME)
++	cp $(LINUXKERNEL_INSTALL_DIR)/arch/arm/boot/dts/$(DTB_FILENAME) /tftpboot/ok335xs2.dtb
++
++
++# uImage with dtb after kernel
++modud:
++	@echo =================================
++	@echo     Building the Kernel with $(DTB_FILENAME)
++	@echo =================================
++	$(MAKE) -C $(LINUXKERNEL_INSTALL_DIR) ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) $(DTB_FILENAME)
++	cp $(LINUXKERNEL_INSTALL_DIR)/arch/arm/boot/dts/$(DTB_FILENAME) /tftpboot/
++	cp $(LINUXKERNEL_INSTALL_DIR)/arch/arm/boot/zImage /tftpboot/$(ZIMAGE_DTB_FILENAME)
++	cat /tftpboot/$(DTB_FILENAME) >> /tftpboot/$(ZIMAGE_DTB_FILENAME)
++	mkimage -A arm -O linux -n linux_dtb -C NONE -a 0x80008000 -e 0x80008000 -d /tftpboot/$(ZIMAGE_DTB_FILENAME) /tftpboot/$(UIMAGE_DTB_FILENAME)
++	rm /tftpboot/$(ZIMAGE_DTB_FILENAME)
++
++
++# modules
++modm:
++	$(MAKE) -j $(MAKE_JOBS) -C $(LINUXKERNEL_INSTALL_DIR) ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) INSTALL_MOD_STRIP=$(INSTALL_MOD_STRIP) modules
++
++
++# install module
++modmi: modm
++	$(MAKE) -C $(LINUXKERNEL_INSTALL_DIR) ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) INSTALL_MOD_PATH=$(ROOTFS_PATH) INSTALL_MOD_STRIP=$(INSTALL_MOD_STRIP) modules_install
++
++
++# MOD_END
++################################################################################
++
+ linux: linux-dtbs
+ 	@echo =================================
+ 	@echo     Building the Linux Kernel
+diff -Nuar A/setup.sh B/setup.sh
+--- A/setup.sh	2020-04-19 21:13:20.000000000 +0800
++++ B/setup.sh	2020-05-11 17:08:14.013375000 +0800
+@@ -67,24 +67,24 @@
+     exit 1
+ fi
+ 
+-if [ -f $cwd/bin/setup-host-check.sh ]; then
+-    $cwd/bin/setup-host-check.sh
+-    check_status
+-else
+-    echo "setup-host-check.sh does not exist in the bin directory"
+-    exit 1
+-fi
++#if [ -f $cwd/bin/setup-host-check.sh ]; then
++#    $cwd/bin/setup-host-check.sh
++#    check_status
++#else
++#    echo "setup-host-check.sh does not exist in the bin directory"
++#    exit 1
++#fi
+ 
+ # Only execute if the Linux version is above 12.xx
+-if [ "$host_upper" -gt "$min_ver_upper" -o "$host_upper" -eq "$min_ver_upper" ]; then
+-    if [ -f $cwd/bin/add-to-group.sh ]; then
+-        $cwd/bin/add-to-group.sh
+-        check_status
+-    else
+-        echo "add-to-group.sh does not exist in the bin directory"
+-        exit 1
+-    fi
+-fi
++#if [ "$host_upper" -gt "$min_ver_upper" -o "$host_upper" -eq "$min_ver_upper" ]; then
++#    if [ -f $cwd/bin/add-to-group.sh ]; then
++#        $cwd/bin/add-to-group.sh
++#        check_status
++#    else
++#        echo "add-to-group.sh does not exist in the bin directory"
++#        exit 1
++#    fi
++#fi
+ 
+ if [ -f $cwd/bin/setup-package-install.sh ]; then
+      $cwd/bin/setup-package-install.sh
