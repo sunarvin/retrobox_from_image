@@ -70,7 +70,7 @@ diff -Nuar A/Makefile B/Makefile
 +	@echo     Building the $(DTB_FILENAME)
 +	@echo =================================
 +	$(MAKE) -C $(LINUXKERNEL_INSTALL_DIR) ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) $(DTB_FILENAME)
-+	cp $(LINUXKERNEL_INSTALL_DIR)/arch/arm/boot/dts/$(DTB_FILENAME) /tftpboot/ok335xs2.dtb
++	cp $(LINUXKERNEL_INSTALL_DIR)/arch/arm/boot/dts/$(DTB_FILENAME) /tftpboot/$(DTB_FILENAME)
 +
 +
 +# uImage with dtb after kernel
